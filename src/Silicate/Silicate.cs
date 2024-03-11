@@ -1,6 +1,6 @@
 using Terraria.ModLoader;
 
-namespace Silicate;
+namespace TeamCatalyst.Silicate;
 
 /// <summary>
 ///     The main <see cref="Mod"/> implementation of Silicate.

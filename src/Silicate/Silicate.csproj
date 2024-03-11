@@ -7,6 +7,7 @@
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
+        <RootNamespace>TeamCatalyst.Silicate</RootNamespace>
     </PropertyGroup>
 
 </Project>

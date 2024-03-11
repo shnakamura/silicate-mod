@@ -4,7 +4,7 @@ using Terraria;
 using Terraria.ModLoader;
 using Terraria.UI;
 
-namespace Silicate.Common.UI;
+namespace TeamCatalyst.Silicate.Common.UI;
 
 public sealed class UIManager : ModSystem
 {
