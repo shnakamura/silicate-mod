@@ -11,22 +11,27 @@ using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.UI;
 
-namespace Silicate.Common.UI;
+namespace TeamCatalyst.Silicate.Common.UI;
 
+/// <summary>
+///     Displays information about the tile currently being hovered at the player's cursor.
+/// </summary>
 public sealed class UITileDisplay : UIState
 {
+    // Splits PascalCase and numbers to look more presentable.
     private static readonly Regex Pattern = new("(\\B[A-Z0-9])", RegexOptions.Compiled);
 
     private Player Player => Main.LocalPlayer;
 
     public UIImage Panel { get; private set; }
 
-    public UIImage Progress { get; private set; }
+    public UIImage Bar { get; private set; }
+    
+    public UIImageFramed TileImage { get; private set; }
 
-    public UIImageFramed Tile { get; private set; }
+    public UIText TileName { get; private set; }
 
-    public UIText Name { get; private set; }
-    public UIText Mod { get; private set; }
+    public UIText ModName { get; private set; }
 
     public float Opacity { get; private set; }
 
@@ -36,7 +41,7 @@ public sealed class UITileDisplay : UIState
 
         // TODO: Central UIElement for the full area of the state.
         // Will also avoid progress bar being cut out from the overflow.
-        
+
         Panel = new UIImage(Silicate.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/Panel"))
         {
             OverflowHidden = true,
@@ -49,25 +54,25 @@ public sealed class UITileDisplay : UIState
 
         Append(Panel);
 
-        Tile = new UIImageFramed(TextureAssets.Tile[0], new Rectangle(9 * 18, 3 * 18, 16, 16))
+        TileImage = new UIImageFramed(TextureAssets.Tile[0], new Rectangle(9 * 18, 3 * 18, 16, 16))
         {
             MarginLeft = 8f,
             VAlign = 0.5f,
             OverrideSamplerState = SamplerState.PointClamp
         };
 
-        Panel.Append(Tile);
+        Panel.Append(TileImage);
 
-        Name = new UIText(string.Empty, 0.8f)
+        TileName = new UIText(string.Empty, 0.8f)
         {
             MarginTop = 8f,
             MarginLeft = 32f,
             OverrideSamplerState = SamplerState.PointClamp
         };
 
-        Panel.Append(Name);
+        Panel.Append(TileName);
 
-        Mod = new UIText(string.Empty, 0.6f)
+        ModName = new UIText(string.Empty, 0.6f)
         {
             MarginBottom = 8f,
             MarginLeft = 32f,
@@ -75,9 +80,9 @@ public sealed class UITileDisplay : UIState
             OverrideSamplerState = SamplerState.PointClamp
         };
 
-        Panel.Append(Mod);
+        Panel.Append(ModName);
 
-        Progress = new UIImage(Silicate.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/Progress"))
+        Bar = new UIImage(Silicate.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/Progress"))
         {
             ScaleToFit = true,
             VAlign = 1f,
@@ -86,7 +91,7 @@ public sealed class UITileDisplay : UIState
             OverrideSamplerState = SamplerState.PointClamp
         };
 
-        Panel.Append(Progress);
+        Panel.Append(Bar);
     }
 
     public override void Update(GameTime gameTime)
@@ -103,6 +108,7 @@ public sealed class UITileDisplay : UIState
     {
         base.Draw(spriteBatch);
 
+        // Panel borders are drawn separately to ensure a smoother resizing. Avoids texture stretching.
         spriteBatch.Draw(
             Silicate.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/Panel_Left").Value,
             Panel.GetDimensions().Position() - new Vector2(4f, 0f),
@@ -120,12 +126,12 @@ public sealed class UITileDisplay : UIState
     {
         Panel.Color = Color.White * Opacity;
 
-        Tile.Color = Color.White * Opacity;
+        TileImage.Color = Color.White * Opacity;
 
-        Name.TextColor = Color.White * Opacity;
-        Mod.TextColor = new Color(88, 88, 173) * Opacity;
+        TileName.TextColor = Color.White * Opacity;
+        ModName.TextColor = new Color(88, 88, 173) * Opacity;
 
-        Progress.Color = Color.Lerp(Color.Black, Color.White, Progress.Width.Pixels / (Panel.Width.Pixels + 2f)) * Opacity;
+        Bar.Color = Color.Lerp(Color.Black, Color.White, Bar.Width.Pixels / (Panel.Width.Pixels + 2f)) * Opacity;
     }
 
     private void UpdatePanel()
@@ -139,23 +145,18 @@ public sealed class UITileDisplay : UIState
             string tileName = Pattern.Replace(name, " $1");
             Vector2 tileNameSize = font.MeasureString(tileName);
 
-            Name.SetText(tileName);
+            TileName.SetText(tileName);
 
             Mod? mod = TileLoader.GetTile(tile.TileType)?.Mod;
             string? modName = mod == null ? "Terraria" : mod.DisplayName;
             Vector2 modNameSize = font.MeasureString(modName);
 
-            Mod.SetText(modName);
+            ModName.SetText(modName);
 
             Asset<Texture2D>? texture = TextureAssets.Tile[tile.TileType];
-            Rectangle frame = new Rectangle(9 * 18, 3 * 18, 16, 16);
+            Rectangle frame = Main.tileFrameImportant[tile.TileType] ? new Rectangle(9 * 18, 3 * 18, 16, 16) : new Rectangle(tile.TileFrameX, tile.TileFrameY, 16, 16);
 
-            if (Main.tileFrameImportant[tile.TileType])
-            {
-                frame = new Rectangle(tile.TileFrameX, tile.TileFrameY, 16, 16);
-            }
-
-            Tile.SetImage(texture, frame);
+            TileImage.SetImage(texture, frame);
 
             float desiredWidth = MathF.Max(tileNameSize.X, modNameSize.X);
             float width = MathHelper.Lerp(Panel.Width.Pixels, desiredWidth, 0.2f) + frame.Width;
@@ -170,10 +171,10 @@ public sealed class UITileDisplay : UIState
         {
             Asset<Texture2D>? texture = Silicate.Instance.Assets.Request<Texture2D>("Assets/Textures/UI/Unknown");
 
-            Tile.SetImage(texture, texture.Frame());
+            TileImage.SetImage(texture, texture.Frame());
 
-            Name.SetText(string.Empty);
-            Mod.SetText(string.Empty);
+            TileName.SetText(string.Empty);
+            ModName.SetText(string.Empty);
 
             Opacity = MathHelper.Lerp(Opacity, 0f, 0.2f);
         }
@@ -193,9 +194,10 @@ public sealed class UITileDisplay : UIState
                 return;
             }
 
+            // TODO: Find a way to make the progress bar fill up after the tile is mined.
             progress = (Panel.Width.Pixels + 2f) * data.damage / 100f;
         }
 
-        Progress.Width.Set(MathHelper.Lerp(Progress.Width.Pixels, progress, 0.2f), 0f);
+        Bar.Width.Set(MathHelper.Lerp(Bar.Width.Pixels, progress, 0.2f), 0f);
     }
 }
